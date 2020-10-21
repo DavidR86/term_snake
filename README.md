@@ -1,6 +1,6 @@
 # term_snake
 ### snake game in x86 assembly for ANSI terminals (Only runs on Linux)
-![gif](res/term_snake.gif)
+![gif](media/term_snake.gif)
 
 ## Information
 - The game runs in real time directly in the terminal. It reads keyboard input from /dev/input/ directly and the graphics are made with ANSI escape codes.
