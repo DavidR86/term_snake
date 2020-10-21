@@ -1,6 +1,7 @@
 	.include "read_kbd.s"
 	.include "score.s"
 	.include "screen.s"
+	.include "rand.s"
 	
 	.data
 timespec:
@@ -16,6 +17,7 @@ dummy:
 screensize:
 height:	.quad 0
 width:	.quad 0
+width_half:	.quad 0
 
 food:
 food_1_x: 	.quad 26 	# x should be a multiple of 2 because of emoji alignment
@@ -39,12 +41,20 @@ main:
 
 	call get_score_from_file
 
+	call rand_init
+
 	movq $start_sound, %rdi
 	call system
 
 	call get_screen_size
 	movq %rax, height
 	movq %rbx, width
+
+	movq %rbx, %rax
+	movq $2, %rcx
+	movq $0, %rdx
+	divq %rcx
+	movq %rax, width_half
 
 	call clear_screen
 
@@ -76,6 +86,11 @@ main:
 	call print_high_score
 
 	call kbd_init
+
+	## Set initial food positions
+	call init_food
+
+
 loop_a:
 	
 	movq $1, %rdi
@@ -84,21 +99,23 @@ loop_a:
 
 	call handle_input
 
-	## Print food
-	movq food_1_x, %rdx
-	movq food_1_y, %rsi
-	call print_food
+	jmp delete_tail
+delete_tail_end:
 
+	## Print food
+	movq food_3_x, %rdx
+	movq food_3_y, %rsi
+	call print_food
+	
+	## Print food
 	movq food_2_x, %rdx
 	movq food_2_y, %rsi
 	call print_food
 
-	movq food_3_x, %rdx
-	movq food_3_y, %rsi
+	## Print food
+	movq food_1_x, %rdx
+	movq food_1_y, %rsi
 	call print_food
-
-	jmp delete_tail
-delete_tail_end:	
 
 	movq $1, %rdi
 	movq $11, %rsi
@@ -226,7 +243,7 @@ delete_tail:
 	orq %rbx, %rcx
 
 	cmpq $0, %rcx
-	je dont_delete_tail
+	je food_1_eaten
 
 	movq food_2_x, %rbx
 	xorq -16(%rbp), %rbx
@@ -235,7 +252,7 @@ delete_tail:
 	orq %rbx, %rcx
 
 	cmpq $0, %rcx
-	je dont_delete_tail
+	je food_2_eaten
 
 	movq food_3_x, %rbx
 	xorq -16(%rbp), %rbx
@@ -244,7 +261,7 @@ delete_tail:
 	orq %rbx, %rcx
 
 	cmpq $0, %rcx
-	je dont_delete_tail
+	je food_3_eaten
 	
 	movq (%rsp), %rsi
 	movq 8(%rsp), %rdi
@@ -278,3 +295,100 @@ dont_delete_tail:
 	call print_curr_score
 	
 	jmp delete_tail_end
+
+food_1_eaten:
+	movq width_half, %rdi
+	call get_rand
+	movq $2, %rdx
+	mulq %rdx
+	movq %rax, food_1_x
+
+	movq height, %rdi
+	call get_rand
+	movq %rax, food_1_y
+
+	## Print food
+	movq food_1_x, %rdx
+	movq food_1_y, %rsi
+	call print_food
+
+	jmp dont_delete_tail
+
+food_2_eaten:
+	movq width_half, %rdi
+	call get_rand
+	movq $2, %rdx
+	mulq %rdx
+	movq %rax, food_2_x
+
+	movq height, %rdi
+	call get_rand
+	movq %rax, food_2_y
+
+	## Print food
+	movq food_2_x, %rdx
+	movq food_2_y, %rsi
+	call print_food
+
+	jmp dont_delete_tail
+
+food_3_eaten:
+	movq width_half, %rdi
+	call get_rand
+	movq $2, %rdx
+	mulq %rdx
+	movq %rax, food_3_x
+
+	movq height, %rdi
+	call get_rand
+	movq %rax, food_3_y
+
+	## Print food
+	movq food_3_x, %rdx
+	movq food_3_y, %rsi
+	call print_food
+
+	jmp dont_delete_tail
+
+init_food:	
+	# prologue
+	pushq	%rbp 			# push the base pointer (and align the stack)
+	movq	%rsp, %rbp		# copy stack pointer value to base pointer
+
+	## Food 1
+	movq width_half, %rdi
+	call get_rand
+	movq $2, %rdx
+	mulq %rdx
+	movq %rax, food_1_x
+
+	movq height, %rdi
+	call get_rand
+	movq %rax, food_1_y
+
+	## Food 2
+	movq width_half, %rdi
+	call get_rand
+	movq $2, %rdx
+	mulq %rdx
+	movq %rax, food_2_x
+
+	movq height, %rdi
+	call get_rand
+	movq %rax, food_2_y
+
+	## Food 3
+	movq width_half, %rdi
+	call get_rand
+	movq $2, %rdx
+	mulq %rdx
+	movq %rax, food_3_x
+
+	movq height, %rdi
+	call get_rand
+	movq %rax, food_3_y
+	
+	## Epilogue
+	movq	%rbp, %rsp		# clear local variables from stack
+	popq	%rbp			# restore base pointer location 
+	ret
