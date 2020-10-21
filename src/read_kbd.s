@@ -1,3 +1,6 @@
+### *** Attempts to read the keyboard directly from a stream. Waits a aconfigurable maximum amount of time
+### *** (that controls the game speed) unless a keyboard press is detected
+	
 	.data
 buffer:
 timeval: .skip 40
@@ -17,7 +20,7 @@ next_y:	 .quad 1
 	
 	.text
 
-pathname:	.asciz "../symlink/keyboard"
+pathname:	.asciz "./symlink/keyboard"
 out:	.asciz "out: %hu %hu %u \n"
 test:	.asciz "out: %u \n"
 
@@ -109,7 +112,7 @@ input_w:
 	movq $-1, next_y
 	jmp input_merge
 input_a:
-	movq $-2, next_x
+	movq $-2, next_x 	# using powers of two fixes and emoji alignment issue
 	movq $0, next_y
 	jmp input_merge
 input_s:

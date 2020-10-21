@@ -1,12 +1,18 @@
+### *** This file contains subroutines for printing characters to the terminal at
+### *** arbitrary positions using ANSI escape sequences and printf.
+### *** Also handles anything related to the terminal window.
+
 	.data
+	
+	## Struct used for the ioctl syscall to get the terminal width and height
 	ws_struct:
 ws_row:	.word 0
 ws_col:	 .word 0
 	.skip 4
 
 	.text
+	## Strings for printing
 scan_sr_s:	.asciz "out: %hu %hu \n"
-
 clr_scr_o: .asciz "\033[2J"
 prnt_char_o: .asciz "\033[%u;%uH%c"
 prnt_emoji_o:	.asciz "\033[%u;%uH🦀"
@@ -33,13 +39,13 @@ clear_screen:
 	call printf
 
 	movq $0, %rdi
-	call fflush
+	call fflush 		# Flush to make reult appear immediately. Alternative could be using a new-line character.
 
 	movq	%rbp, %rsp		# clear local variables from stack
 	popq	%rbp			# restore base pointer location 
 	ret
 	
-### Prints a character to an (x,y) coordinate of the terminal using ANSI escape codes.
+### Prints an ASCII character to an (x,y) coordinate of the terminal using ANSI escape codes.
 ### 	Arguments:
 ### %rdi: character to print
 ### %rsi: line coordinate
@@ -47,7 +53,7 @@ clear_screen:
 ###  	Returns:
 ### none
 print_char_at_coord:
-		# prologue
+	# prologue
 	pushq	%rbp 			# push the base pointer (and align the stack)
 	movq	%rsp, %rbp		# copy stack pointer value to base pointer
 
@@ -64,9 +70,9 @@ print_char_at_coord:
 	popq	%rbp			# restore base pointer location 
 	ret
 
-### Prints a character to an (x,y) coordinate of the terminal using ANSI escape codes.
+### Prints a crab emoji to an (x,y) coordinate of the terminal using ANSI escape codes.
 ### 	Arguments:
-### %rdi: nothing (for compatibility reasons)
+### %rdi: nothing (kept for compatibility reasons)
 ### %rsi: line coordinate
 ### %rdx: collumn coordinate
 ###  	Returns:
@@ -89,9 +95,9 @@ print_emoji_at_coord:
 	popq	%rbp			# restore base pointer location 
 	ret
 
-### Prints a character to an (x,y) coordinate of the terminal using ANSI escape codes.
+### Prints a box unicode character to an (x,y) coordinate of the terminal using ANSI escape codes.
 ### 	Arguments:
-### %rdi: nothing (for compatibility reasons)
+### %rdi: nothing (kept for compatibility reasons)
 ### %rsi: line coordinate
 ### %rdx: collumn coordinate
 ###  	Returns:
@@ -112,7 +118,7 @@ print_box:
 	popq	%rbp			# restore base pointer location 
 	ret
 
-### Prints a character to an (x,y) coordinate of the terminal using ANSI escape codes.
+### Prints a food emoji to an (x,y) coordinate of the terminal using ANSI escape codes.
 ### 	Arguments:
 ### %rdi: nothing (for compatibility reasons)
 ### %rsi: line coordinate
@@ -135,7 +141,7 @@ print_food:
 	popq	%rbp			# restore base pointer location 
 	ret
 
-### Deletes the character at an (x,y) coordinate of the terminal using ANSI escape codes.
+### Deletes the character at an (x,y) coordinate of the terminal using ANSI escape codes, using a whitespace and leaves the cursor there
 ### 	Arguments:
 ### %rdi: line coordinate
 ### %rsi: collumn coordinate
@@ -154,13 +160,6 @@ rem_char_at_coord:
 	movq	%rbp, %rsp		# clear local variables from stack
 	popq	%rbp			# restore base pointer location 
 	ret
-
-### Deletes the character at an (x,y) coordinate of the terminal using ANSI escape codes.
-### 	Arguments:
-### none
-###  	Returns:
-### %rax: height
-### %rbx: width
 
 ### Deletes the character at an (x,y) coordinate of the terminal using ANSI and a backspace.
 ### 	Arguments:
@@ -183,13 +182,12 @@ rem_char_at_coord_backspace:
 	popq	%rbp			# restore base pointer location 
 	ret
 
-### Deletes the character at an (x,y) coordinate of the terminal using ANSI escape codes.
+### Attempts to get the terminal size from the kernel using a syscall
 ### 	Arguments:
 ### none
 ###  	Returns:
 ### %rax: height
-### %rbx: width
-	
+### %rbx: width	
 get_screen_size:
 		# prologue
 	pushq	%rbp 			# push the base pointer (and align the stack)
@@ -214,7 +212,12 @@ get_screen_size:
 	movq	%rbp, %rsp		# clear local variables from stack
 	popq	%rbp			# restore base pointer location 
 	ret
-
+	
+### Prints the game borders on the terminal screen
+### 	Arguments:
+### none
+###  	Returns:
+### none
 print_borders:
 	## Prologue
 	pushq	%rbp 			# push the base pointer (and align the stack)
@@ -263,7 +266,12 @@ loop_c:
 	movq	%rbp, %rsp		# clear local variables from stack
 	popq	%rbp			# restore base pointer location 
 	ret
-
+	
+### Prints the game title in the first line of the terminal
+### 	Arguments:
+### none
+###  	Returns:
+### none
 print_title:
 	## Prologue
 	pushq	%rbp 			# push the base pointer (and align the stack)
@@ -290,7 +298,12 @@ print_title:
 	movq	%rbp, %rsp		# clear local variables from stack
 	popq	%rbp			# restore base pointer location 
 	ret
-
+	
+### Prints the input string on the first line of the terminal
+### 	Arguments:
+### none
+###  	Returns:
+### none
 print_input_str:
 	## Prologue
 	pushq	%rbp 			# push the base pointer (and align the stack)
@@ -311,6 +324,11 @@ print_input_str:
 	popq	%rbp			# restore base pointer location 
 	ret
 
+### Prints the final message
+### 	Arguments:
+### none
+###  	Returns:
+### none
 print_you_lost:
 	## Prologue
 	pushq	%rbp 			# push the base pointer (and align the stack)
@@ -347,7 +365,12 @@ print_you_lost:
 	movq	%rbp, %rsp		# clear local variables from stack
 	popq	%rbp			# restore base pointer location 
 	ret
-	
+
+### Prints the highscore string and the highscore on the upper left corner of the terminal.
+### 	Arguments:
+### none
+###  	Returns:
+### none
 print_high_score:
 	## Prologue
 	pushq	%rbp 			# push the base pointer (and align the stack)
@@ -375,7 +398,12 @@ print_high_score:
 	movq	%rbp, %rsp		# clear local variables from stack
 	popq	%rbp			# restore base pointer location 
 	ret
-
+	
+### Prints the current score in its correct place
+### 	Arguments:
+### none
+###  	Returns:
+### none
 print_curr_score:
 	## Prologue
 	pushq	%rbp 			# push the base pointer (and align the stack)

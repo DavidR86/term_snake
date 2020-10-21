@@ -2,8 +2,11 @@
 	.include "score.s"
 	.include "screen.s"
 	.include "rand.s"
+	.include "music.s"
 	
 	.data
+	## This struct is for nano_wait. A different wait method is used currently,
+	## but it is left here in case I later implement a constant 'framerate'.
 timespec:
 tv_sec:
 	.quad 0
@@ -14,24 +17,21 @@ dummy:
 	.quad 0x0
 	.quad 0x0
 
+	## Holds the size of the terminal window (in rows and collumns)
 screensize:
 height:	.quad 0
 width:	.quad 0
-width_half:	.quad 0
+width_half:	.quad 0 	# Half of the width, to avoid dividing it all the time.
 
 food:
-food_1_x: 	.quad 26 	# x should be a multiple of 2 because of emoji alignment
+food_1_x: 	.quad 26 	# x should always be a multiple of 2 because of emoji alignment
 food_1_y:	.quad 10
 food_2_x:	.quad 40
 food_2_y:	.quad 4
 food_3_x:	.quad 60
 food_3_y:	.quad 7
-	.text
-start_sound:	.asciz "while [ 1 ]; do aplay ../res/KarmaNES.wav > /dev/null 2>&1; done &"
-stop_sound:	.asciz "kill -9 -$(ps -o pgid= $(pgrep -x aplay) | grep -o '[0-9]*')"
 
-
-	.global main
+	.global main 		# Export main
 
 main:
 	
@@ -39,14 +39,13 @@ main:
 	pushq	%rbp 			# push the base pointer (and align the stack)
 	movq	%rsp, %rbp		# copy stack pointer value to base pointer
 
-	call get_score_from_file
+	call get_score_from_file # Read highscore
 
-	call rand_init
+	call rand_init 		# Initialize rng
 
-	movq $start_sound, %rdi
-	call system
-
-	call get_screen_size
+	call start_sound 	# Start music
+	
+	call get_screen_size 	# Get width and height
 	movq %rax, height
 	movq %rbx, width
 
@@ -54,17 +53,17 @@ main:
 	movq $2, %rcx
 	movq $0, %rdx
 	divq %rcx
-	movq %rax, width_half
+	movq %rax, width_half 	# save width/2
 
 	call clear_screen
 
-	call clear_screen
+	call print_borders 	# Borders at the edge of the game
 
-	call print_borders
+	call print_title 	# Print game name
+	call print_input_str 	# Print input field
 
-	call print_title
-	call print_input_str
-
+	## Initialize snake. Elements are added to the snake by pushing its (y,x) coordinates into the stack.
+	## New elements are added with (-1,-1) during runtime and get updated as it moves.
 	pushq $10
 	pushq $10
 
@@ -85,20 +84,22 @@ main:
 
 	call print_high_score
 
-	call kbd_init
+	call kbd_init 		# This attempts to get the keyboard input from the keyboard symlink pointing at a device in /dev/input/...
 
 	## Set initial food positions
 	call init_food
 
-
+	## Main game loop 
 loop_a:
 	
 	movq $1, %rdi
 	movq $11, %rsi
-	call rem_char_at_coord 	# Deletes past user input on terminal windows and positions cursor on (0,0)
+	call rem_char_at_coord 	# Deletes past user input on terminal windows and positions cursor on (1,11)
 
-	call handle_input
+	call handle_input 	# Wait for a specfic amount of miliseconds, or until keyboard input is detected.
 
+	## Deletes the tail of the snake if not on a food coordinate.
+	## Using jumps instead of subroutines because the snake is saved in the stack, and %rbp and %rsp are used to get the head and tail.
 	jmp delete_tail
 delete_tail_end:
 
@@ -119,9 +120,9 @@ delete_tail_end:
 
 	movq $1, %rdi
 	movq $11, %rsi
-	call rem_char_at_coord  # Deletes past user input on terminal windows and positions cursor on (0,0)
+	call rem_char_at_coord  # Deletes past user input on terminal windows and positions cursor on (1,11)
 	
-	## Update array positions
+	## Update array positions. Snake n is updated with position n+1. New head is added later
 	movq %rsp, %rax 		# Point to tail
 loop_d:
 	movq 16(%rax), %rbx 	# Get x+1
@@ -135,7 +136,7 @@ loop_d:
 	cmpq %rcx, %rax
 	jne loop_d
 
-	## Update head
+	## Update head. handle_input should have updated next_x and next_y based on user input. Otherwise, the snake keeps its course
 	movq next_y, %rsi 	
 	addq -8(%rbp), %rsi
 	movq %rsi, -8(%rbp)
@@ -152,26 +153,26 @@ check_defeat_end:
 	movq -8(%rbp), %rsi
 	
 	movq $0, %rdi
-	call print_emoji_at_coord
+	call print_emoji_at_coord # Emoji version
 	
-	jmp loop_a
+	jmp loop_a 		# End of main game loop. Repeat
 
+	## Final tasks after loosing
 game_over:
 	
 	call print_you_lost
 
-	call write_score_to_file
+	call write_score_to_file # Writes score if it is greater than highscore
 
-	movq $stop_sound, %rdi
-	call system
+	call stop_sound
 
+	## Main soubroutine epilogue
 	movq	%rbp, %rsp		# clear local variables from stack
 	popq	%rbp			# restore base pointer location 
 	ret
 
+	## Not currently used
 nano_sleep:
-
-		
 	# prologue
 	pushq	%rbp 			# push the base pointer (and align the stack)
 	movq	%rsp, %rbp		# copy stack pointer value to base pointer
@@ -185,29 +186,30 @@ nano_sleep:
 	popq	%rbp			# restore base pointer location 
 	ret
 
+	## Checks if snake has collided with wall or itself
 check_defeat:
-	## If x == max_width
+	## If x > max_width
 	movq width, %rax
 	dec %rax
 	cmpq -16(%rbp), %rax
 	jle game_over
 
-	## If x == 0
+	## If x =< 1
 	movq $1, %rax
 	cmpq -16(%rbp), %rax
 	jge game_over
 
-	## If y == max_height
+	## If y > max_height
 	movq height, %rax
-	dec %rax
 	cmpq -8(%rbp), %rax
 	jle game_over
 
-	## If y == 1
-	movq $1, %rax
+	## If y =< 2
+	movq $2, %rax
 	cmpq -8(%rbp), %rax
 	jge game_over
 
+	
 	movq %rsp, %rax 		# Point to tail
 check_defeat_loop:
 	movq (%rax), %rbx 	# Get x
@@ -219,13 +221,13 @@ check_defeat_loop:
 	orq %rbx, %rcx
 
 	cmpq $0, %rcx
-	je game_over
+	je game_over 		# If head is at same position as a member of the snake
 
 	addq $16, %rax
 	movq %rbp, %rcx
 	subq $16, %rcx
 	cmpq %rcx, %rax
-	jne check_defeat_loop
+	jne check_defeat_loop 	# If next, jump to start of loop with next element of the snake.
 	
 	jmp check_defeat_end
 
@@ -243,7 +245,7 @@ delete_tail:
 	orq %rbx, %rcx
 
 	cmpq $0, %rcx
-	je food_1_eaten
+	je food_1_eaten 	# If head is at potion of food_1
 
 	movq food_2_x, %rbx
 	xorq -16(%rbp), %rbx
@@ -262,13 +264,15 @@ delete_tail:
 
 	cmpq $0, %rcx
 	je food_3_eaten
-	
+
+	## Delete the tail of the snake
 	movq (%rsp), %rsi
 	movq 8(%rsp), %rdi
-	call rem_char_at_coord
+	call rem_char_at_coord 
 	jmp delete_tail_end
 
 dont_delete_tail:
+	## If tail isn't deleted, food was eaten. Time to make the snake bigger
 	pushq $-1 		# Add new element to snake. Coords will be updated automatically
 	pushq $-1
 
@@ -287,7 +291,7 @@ dont_delete_tail:
 	pushq $-1
 	pushq $-1
 
-	## update score
+	## update score by 6
 	movq curr_score, %rax
 	addq $6, %rax
 	movq %rax, curr_score
@@ -295,7 +299,12 @@ dont_delete_tail:
 	call print_curr_score
 	
 	jmp delete_tail_end
-
+	
+	## If food_1 is eaten, move it to another random location within boundaries.
+	## The food should be moved to a location that is not a wall, or right next to a wall (makes eating it very hard)
+	## Because of emoji alignment, the x coord needs to be a multiple of 2
+	## The food can theoretically spawn inside the snake, and would be hidden by it until the snake moves. It should not get eaten.
+	## The food can theoreticall spawn inside the head of the snail. It should not be an issue either.
 food_1_eaten:
 	movq width_half, %rdi
 	call get_rand
@@ -350,6 +359,7 @@ food_3_eaten:
 
 	jmp dont_delete_tail
 
+	## Initialize food at random location
 init_food:	
 	# prologue
 	pushq	%rbp 			# push the base pointer (and align the stack)

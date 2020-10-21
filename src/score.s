@@ -1,3 +1,4 @@
+### *** This file is in charge of reading and writing to and from the text file where the highscore is kept
 	.data
 high_score:	.asciz "0&&&&&"
 high_score_u:	.quad 0
@@ -6,12 +7,17 @@ curr_score_o:	.asciz "%06u"
 score_ptr:	.quad 0
 
 	.text
-score_path:	.asciz "../res/score"
+score_path:	.asciz "./res/score"
 score_mode_r:	.asciz "r"
 score_mode_w:	.asciz "w"
 score_format:	.asciz "%s"
 score_format_u:	.asciz "%u"
 
+### Attempts to read the score file. The output is stored in the .data variables defined above.
+### 	Arguments:
+### none
+###  	Returns:
+### none
 get_score_from_file:
 	# prologue
 	pushq	%rbp 			# push the base pointer (and align the stack)
@@ -20,7 +26,7 @@ get_score_from_file:
 	movq $0, %rax
 	movq $score_path, %rdi
 	movq $score_mode_r, %rsi
-	call fopen
+	call fopen 		# Open file
 
 	movq %rax, score_ptr
 
@@ -28,26 +34,31 @@ get_score_from_file:
 	movq score_ptr, %rdi
 	movq $score_format, %rsi
 	movq $high_score, %rdx
-	call fscanf
+	call fscanf 		# Read score as string for displaying it in terminal
 
 	movq $0, %rax
 	movq score_ptr, %rdi
-	call rewind
+	call rewind 		# Reset file position
 
 	movq $0, %rax
 	movq score_ptr, %rdi
 	movq $score_format_u, %rsi
 	movq $high_score_u, %rdx
-	call fscanf 		# Read score again as unsigned int
+	call fscanf 		# Read score again as unsigned int, for comparisons
 	
 	movq $0, %rax
 	movq score_ptr, %rdi
-	call fclose
+	call fclose 		# Close file
 
 	movq	%rbp, %rsp		# clear local variables from stack
 	popq	%rbp			# restore base pointer location 
 	ret
-	
+
+### Writes the game score to the score file if it is higher than the highscore
+### 	Arguments:
+### none
+###  	Returns:
+### none
 write_score_to_file:
 	# prologue
 	pushq	%rbp 			# push the base pointer (and align the stack)
