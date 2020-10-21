@@ -1,6 +1,8 @@
 # term_snake
 ### snake game in x86 assembly for ANSI terminals (Only runs on Linux)
 ![gif](media/term_snake.gif)
+See the gif avobe or in the media folder to know how it should look when properly installed. It works out of the box on a new Ubuntu installation.
+I also tested it with a new version of Debian with the Xcfe4-terminal. It works well too, but I had to install an emoji font.
 
 ## Information
 - The game runs in real time directly in the terminal. It reads keyboard input from /dev/input/ directly and the graphics are made with ANSI escape codes.
