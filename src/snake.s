@@ -1,4 +1,5 @@
 	.include "read_kbd.s"
+	.include "score.s"
 	.include "screen.s"
 	
 	.data
@@ -21,8 +22,8 @@ food_1_x: 	.quad 26 	# x should be a multiple of 2 because of emoji alignment
 food_1_y:	.quad 10
 food_2_x:	.quad 40
 food_2_y:	.quad 4
-food_3_x:	.quad 25
-food_3_y:	.quad 2
+food_3_x:	.quad 60
+food_3_y:	.quad 7
 	.text
 start_sound:	.asciz "while [ 1 ]; do aplay ../res/KarmaNES.wav > /dev/null 2>&1; done &"
 stop_sound:	.asciz "kill -9 -$(ps -o pgid= $(pgrep -x aplay) | grep -o '[0-9]*')"
@@ -36,6 +37,8 @@ main:
 	pushq	%rbp 			# push the base pointer (and align the stack)
 	movq	%rsp, %rbp		# copy stack pointer value to base pointer
 
+	call get_score_from_file
+
 	movq $start_sound, %rdi
 	call system
 
@@ -48,6 +51,9 @@ main:
 	call clear_screen
 
 	call print_borders
+
+	call print_title
+	call print_input_str
 
 	pushq $10
 	pushq $10
@@ -64,11 +70,16 @@ main:
 	pushq $6
 	pushq $10
 
+	pushq $5
+	pushq $10
+
+	call print_high_score
+
 	call kbd_init
 loop_a:
 	
-	movq $0, %rdi
-	movq $0, %rsi
+	movq $1, %rdi
+	movq $11, %rsi
 	call rem_char_at_coord 	# Deletes past user input on terminal windows and positions cursor on (0,0)
 
 	call handle_input
@@ -89,8 +100,8 @@ loop_a:
 	jmp delete_tail
 delete_tail_end:	
 
-	movq $0, %rdi
-	movq $0, %rsi
+	movq $1, %rdi
+	movq $11, %rsi
 	call rem_char_at_coord  # Deletes past user input on terminal windows and positions cursor on (0,0)
 	
 	## Update array positions
@@ -129,12 +140,14 @@ check_defeat_end:
 	jmp loop_a
 
 game_over:
-
+	
 	call print_you_lost
+
+	call write_score_to_file
 
 	movq $stop_sound, %rdi
 	call system
-	
+
 	movq	%rbp, %rsp		# clear local variables from stack
 	popq	%rbp			# restore base pointer location 
 	ret
@@ -202,6 +215,10 @@ check_defeat_loop:
 delete_tail:
 	## Delete tail of snake if not in a food coordinate
 
+	movq -16(%rbp), %rax
+	cmpq $-1, %rax
+	je dont_delete_tail 	# If tail hasn't been updated
+
 	movq food_1_x, %rbx
 	xorq -16(%rbp), %rbx
 	movq food_1_y, %rcx
@@ -237,4 +254,27 @@ delete_tail:
 dont_delete_tail:
 	pushq $-1 		# Add new element to snake. Coords will be updated automatically
 	pushq $-1
+
+	pushq $-1
+	pushq $-1
+
+	pushq $-1
+	pushq $-1
+
+	pushq $-1
+	pushq $-1
+
+	pushq $-1
+	pushq $-1
+
+	pushq $-1
+	pushq $-1
+
+	## update score
+	movq curr_score, %rax
+	addq $6, %rax
+	movq %rax, curr_score
+
+	call print_curr_score
+	
 	jmp delete_tail_end

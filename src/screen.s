@@ -13,6 +13,9 @@ prnt_emoji_o:	.asciz "\033[%u;%uH🦀"
 prnt_box_o:	.asciz "\033[%u;%uH▒"
 prnt_food_o:	.asciz "\033[%u;%uH🍗"
 you_lost_o:	.asciz "[ YOU LOST! ]   "
+high_score_str:	.asciz "[ HIGHSCORE: 000000 YOU: 000000 ]\033[20D" # s=33
+title_o:	.asciz "== [ TERM SNAKE ] ==" # s/2 = 10
+input_o:	.asciz " [ INPUT:   ]"
 
 
 ### Clears the screen using ANSI escape codes
@@ -21,7 +24,7 @@ you_lost_o:	.asciz "[ YOU LOST! ]   "
 ###  	Returns:
 ### none
 clear_screen:
-		# prologue
+	# prologue
 	pushq	%rbp 			# push the base pointer (and align the stack)
 	movq	%rsp, %rbp		# copy stack pointer value to base pointer
 
@@ -223,7 +226,7 @@ loop_b:
 	
 	movq $61, %rdi
 	movq -8(%rbp), %rdx
-	movq $0, %rsi
+	movq $2, %rsi
 	call print_box # Upper border
 
 	movq $61, %rdi
@@ -237,13 +240,13 @@ loop_b:
 
 	popq %r8
 
-	pushq $-1
+	pushq $1
 loop_c:
 	incq -8(%rbp)
 	
 	movq $61, %rdi
 	movq -8(%rbp), %rsi
-	movq $0, %rdx
+	movq $1, %rdx
 	call print_box # Upper border
 
 	movq $61, %rdi
@@ -261,8 +264,55 @@ loop_c:
 	popq	%rbp			# restore base pointer location 
 	ret
 
+print_title:
+	## Prologue
+	pushq	%rbp 			# push the base pointer (and align the stack)
+	movq	%rsp, %rbp		# copy stack pointer value to base pointer
+
+	movq width, %rax
+	movq $2, %rcx
+	movq $0, %rdx
+	divq %rcx
+	subq $10, %rax
+	pushq %rax
+
+	movq $1, %rsi
+	
+	popq %rdx
+	movq $32, %rdi
+	
+	call print_char_at_coord
+
+	movq $0, %rax
+	movq $title_o, %rdi
+	call printf
+
+	movq	%rbp, %rsp		# clear local variables from stack
+	popq	%rbp			# restore base pointer location 
+	ret
+
+print_input_str:
+	## Prologue
+	pushq	%rbp 			# push the base pointer (and align the stack)
+	movq	%rsp, %rbp		# copy stack pointer value to base pointer
+
+	movq $1, %rsi
+	
+	movq $1, %rdx
+	movq $32, %rdi
+	
+	call print_char_at_coord
+
+	movq $0, %rax
+	movq $input_o, %rdi
+	call printf
+
+	movq	%rbp, %rsp		# clear local variables from stack
+	popq	%rbp			# restore base pointer location 
+	ret
+
 print_you_lost:
-		## Prologue
+	## Prologue
 	pushq	%rbp 			# push the base pointer (and align the stack)
 	movq	%rsp, %rbp		# copy stack pointer value to base pointer
 
@@ -288,10 +338,64 @@ print_you_lost:
 	movq $you_lost_o, %rdi
 	call printf
 
+	## Restore original cursor position after game ends
 	movq height, %rsi
-	movq $0, %rdx
+	movq $1, %rdx
 	movq $61, %rdi
 	call print_char_at_coord
+
+	movq	%rbp, %rsp		# clear local variables from stack
+	popq	%rbp			# restore base pointer location 
+	ret
+	
+print_high_score:
+	## Prologue
+	pushq	%rbp 			# push the base pointer (and align the stack)
+	movq	%rsp, %rbp		# copy stack pointer value to base pointer
+
+	movq width, %rax
+	subq $35, %rax
+	pushq %rax
+
+	movq $1, %rsi
+	
+	popq %rdx
+	movq $32, %rdi
+	
+	call print_char_at_coord
+
+	movq $0, %rax
+	movq $high_score_str, %rdi
+	call printf
+
+	movq $0, %rax
+	movq $high_score, %rdi
+	call printf
+
+	movq	%rbp, %rsp		# clear local variables from stack
+	popq	%rbp			# restore base pointer location 
+	ret
+
+print_curr_score:
+	## Prologue
+	pushq	%rbp 			# push the base pointer (and align the stack)
+	movq	%rsp, %rbp		# copy stack pointer value to base pointer
+
+	movq width, %rax
+	subq $10, %rax
+	pushq %rax
+
+	movq $1, %rsi
+	
+	popq %rdx
+	movq $32, %rdi
+	
+	call print_char_at_coord
+
+	movq $0, %rax
+	movq $curr_score_o, %rdi
+	movq curr_score, %rsi
+	call printf
 
 	movq	%rbp, %rsp		# clear local variables from stack
 	popq	%rbp			# restore base pointer location 
