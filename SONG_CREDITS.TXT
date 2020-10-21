@@ -1,0 +1,21 @@
+MUSIC CREDITS:
+----------------------------------------
+
+Title:
+    Karma(8-bit)
+
+Author:
+    Pro Sensory
+
+URL:
+    https://opengameart.org/content/karma8-bit
+
+License(s):
+    * CC0 ( http://creativecommons.org/publicdomain/zero/1.0/legalcode )
+
+Copyright/Attribution Notice:
+    Just include my name Alex McCulloch. Attribution appreciated but not required.
+
+File(s):
+    * KarmaNES.wav
+----------------------------------------
