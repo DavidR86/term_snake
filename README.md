@@ -6,9 +6,9 @@ See the gif avobe or in the media folder to know how it should look when properl
 I also tested it with a new version of Debian with the Xcfe4-terminal. It works well too, but I had to install an emoji font.
 
 ## Information
-- The game runs in real time directly in the terminal. It reads keyboard input from /dev/input/ directly and the graphics are made with ANSI escape codes.
-- The game has retro-ounding music.
-- There best version is the one that uses Unicode emojis, but if your terminal does not support it, you can run the ASCII version.
+- The game runs in the terminal. It reads keyboard input from /dev/input/ directly and the graphics are made with ANSI escape codes.
+- The game has retro-sounding music.
+- The best version is the one that uses Unicode emojis, but if your terminal does not support it, you can run the ASCII version.
 - Pro-tip: You can customize your terminal to make the game look different (by changing the size of the window, the fonts, colors and even the background)
 
 ## To build and run: (See the install.sh script)
@@ -27,7 +27,7 @@ I also tested it with a new version of Debian with the Xcfe4-terminal. It works 
 - Make sure you have the required software.
 
 ## Required software: (The newer versions of Ubuntu should have everything that is required. Debian and other distributions might not have emoji fonts)
-- aplay (Linus utility to play sound)
+- aplay (Linux utility to play sound)
 - grep
 - pgrep
 - a terminal with ANSI escape character support
